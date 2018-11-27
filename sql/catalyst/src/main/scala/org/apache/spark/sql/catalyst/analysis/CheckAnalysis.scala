@@ -48,6 +48,14 @@ trait CheckAnalysis extends PredicateHelper {
     }).length > 1
   }
 
+  protected def containsGeneratorAndAggregate(exprs: Seq[Expression]): Boolean = {
+    exprs.flatMap(_.collect {
+      case e: Generator => e
+    }).length > 0 && exprs.flatMap(_.collect {
+      case a: AggregateExpression => a
+    }).length > 0
+  }
+
   protected def hasMapType(dt: DataType): Boolean = {
     dt.existsRecursively(_.isInstanceOf[MapType])
   }
@@ -328,6 +336,11 @@ trait CheckAnalysis extends PredicateHelper {
           case p @ Project(exprs, _) if containsMultipleGenerators(exprs) =>
             failAnalysis(
               s"""Only a single table generating function is allowed in a SELECT clause, found:
+                 | ${exprs.map(_.sql).mkString(",")}""".stripMargin)
+
+          case p1 @ Project(exprs, _) if containsGeneratorAndAggregate(exprs) =>
+            failAnalysis(
+              s"""Aggregate is not allowed in the Generators, found:
                  | ${exprs.map(_.sql).mkString(",")}""".stripMargin)
 
           case j: Join if !j.duplicateResolved =>
