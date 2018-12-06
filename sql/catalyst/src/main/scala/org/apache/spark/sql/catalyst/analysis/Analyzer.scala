@@ -1754,6 +1754,12 @@ class Analyzer(
               // exception earlier.
               assert(resolvedGenerator == null, "More than one generator found in SELECT.")
 
+              // Another sanity check, currently we should not allow aggregations in a generator.
+              if(generator.find(_.isInstanceOf[AggregateExpression]).isDefined) {
+                throw new AnalysisException("Aggregate expressions are not allowed " +
+                  "in the generator")
+              }
+
               resolvedGenerator =
                 Generate(
                   generator,
